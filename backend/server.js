@@ -18,7 +18,8 @@ connectDB();
 // 1. CORS (Cross-Origin Resource Sharing)
 // This allows the frontend (running on a different origin) to make requests to this backend.
 const corsOptions = {
-  origin: process.env.FRONTEND_URL, // Only allow requests from this origin
+  //origin: process.env.FRONTEND_URL, // Only allow requests from this origin
+  origin: 'https://project-vault-pro.vercel.app',
   optionsSuccessStatus: 200,
 };
 app.use(cors(corsOptions));

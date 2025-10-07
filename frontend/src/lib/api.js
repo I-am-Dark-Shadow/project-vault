@@ -3,7 +3,8 @@ import axios from 'axios';
 // Create an Axios instance with a base URL from environment variables.
 // Vite uses the `VITE_` prefix for environment variables exposed to the client.
 const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api',
+  //baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api',
+  baseURL: 'https://project-vault-backend.vercel.app/api',
   withCredentials: true,
 });
 
