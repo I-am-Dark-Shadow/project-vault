@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Vault, Plus, User, Menu, FolderPlus } from 'lucide-react';
+import { Plus, User, Menu, FolderPlus } from 'lucide-react';
 
 export function Header({ onAddProjectClick }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -17,7 +17,7 @@ export function Header({ onAddProjectClick }) {
           {/* Left: Logo */}
           <a href="#" className="flex items-center gap-3 group">
             <div className="h-12 w-12 rounded-xl border border-white/10 bg-white/[0.03] flex items-center justify-center shadow-[0_4px_20px_rgba(0,0,0,0.15)] group-hover:border-white/20 transition-all duration-300 ease-in-out">
-              <Vault className="w-6 h-6 text-cyan-300" />
+              <img src="/logo.png" className="w-7 h-7 text-cyan-300" />
             </div>
             <div className="flex flex-col">
               <span className="text-base font-semibold tracking-tight leading-none">Project Vault</span>
