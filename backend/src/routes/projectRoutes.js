@@ -1,21 +1,22 @@
 import express from 'express';
 import {
-  uploadProject,
+  createProject,
   getProjects,
   deleteProject,
   downloadProject,
+  generateSignature,
 } from '../controllers/projectController.js';
-import upload from '../middleware/multer.js';
 
 const router = express.Router();
 
-// Route for getting all projects and uploading a new one
+// Route for generating the signature needed for direct uploads
+router.route('/generate-signature').post(generateSignature);
+
+// Route for getting all projects and creating a new project entry (metadata only)
 router
   .route('/')
   .get(getProjects)
-  // The middleware 'upload.single('projectFile')' processes the file upload.
-  // 'projectFile' must match the 'name' attribute of the file input in the frontend form.
-  .post(upload.single('projectFile'), uploadProject);
+  .post(createProject); // This no longer uses multer for file uploads
 
 // Route for deleting a specific project
 router.route('/:id').delete(deleteProject);
