@@ -4,6 +4,7 @@ import axios from 'axios';
 // Vite uses the `VITE_` prefix for environment variables exposed to the client.
 const apiClient = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api',
+  withCredentials: true,
 });
 
 // A helper to handle API errors consistently.
