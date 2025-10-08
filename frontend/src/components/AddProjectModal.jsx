@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { FileArchive, UploadCloud, LoaderCircle, ArrowUpCircle } from 'lucide-react';
 import { useDropzone } from 'react-dropzone';
 import { useProjects } from '@/hooks/useProjects';
+import * as api from '@/lib/api';
 import { toast } from 'sonner';
 
 export function AddProjectModal({ isOpen, onOpenChange }) {
@@ -12,7 +13,8 @@ export function AddProjectModal({ isOpen, onOpenChange }) {
   const [projectDesc, setProjectDesc] = useState('');
   const [file, setFile] = useState(null);
   const [fileError, setFileError] = useState('');
-  const { addProject, isAdding } = useProjects();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { refetch } = useProjects();
 
   const onDrop = useCallback((acceptedFiles, fileRejections) => {
     setFileError('');
@@ -29,7 +31,7 @@ export function AddProjectModal({ isOpen, onOpenChange }) {
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: { 'application/zip': ['.zip'] },
-    maxSize: 200 * 1024 * 1024, // 200 MB
+    maxSize: 200 * 1024 * 1024, // 200 MB limit (Vercel limit is bypassed)
     multiple: false,
   });
 
@@ -54,28 +56,45 @@ export function AddProjectModal({ isOpen, onOpenChange }) {
       return;
     }
 
-    const formData = new FormData();
-    formData.append('name', projectName.trim() || 'Untitled Project');
-    formData.append('description', projectDesc.trim());
-    formData.append('projectFile', file);
+    setIsSubmitting(true);
+    const toastId = toast.loading('Starting upload process...');
 
-    const promise = addProject(formData);
+    try {
+      // Step 1: Get a signature from our backend
+      toast.loading('Generating secure signature...', { id: toastId });
+      const signatureData = await api.generateUploadSignature();
 
-    toast.promise(promise, {
-      loading: 'Uploading your project...',
-      success: (data) => {
-        handleOpenChange(false); // Close modal on success
-        return `${data.name} has been added to the vault.`;
-      },
-      error: (err) => {
-        return err.message || 'An unexpected error occurred.';
-      },
-    });
+      // Step 2: Upload the file directly to Cloudinary
+      toast.loading('Uploading file... This may take a moment.', { id: toastId });
+      const cloudinaryResponse = await api.uploadFileToCloudinary(file, signatureData);
+
+      // Step 3: Send the new file's info to our backend to save it
+      toast.loading('Finalizing and saving project...', { id: toastId });
+      const projectData = {
+        name: projectName.trim() || 'Untitled Project',
+        description: projectDesc.trim(),
+        fileUrl: cloudinaryResponse.secure_url,
+        filePublicId: cloudinaryResponse.public_id,
+        originalFileName: file.name,
+      };
+      const newProject = await api.createProject(projectData);
+
+      // Success!
+      toast.success(`${newProject.name} has been added to the vault.`, { id: toastId });
+      handleOpenChange(false);
+      refetch(); // Refresh the project list on the main page
+
+    } catch (error) {
+      console.error('Upload failed:', error);
+      toast.error(error.message || 'An unknown error occurred.', { id: toastId });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-lg p-6">
+      <DialogContent className="sm:max-w-lg p-5">
         <DialogHeader className="flex flex-row items-center gap-3 space-y-0">
           <div className="h-11 w-11 rounded-xl bg-white/[0.06] border border-white/10 flex items-center justify-center flex-shrink-0">
               <FileArchive className="w-5 h-5 text-cyan-300" />
@@ -89,7 +108,7 @@ export function AddProjectModal({ isOpen, onOpenChange }) {
         <form onSubmit={handleSubmit} className="space-y-4 pt-2">
           <div>
             <label htmlFor="projectName" className="block text-sm text-white/70 mb-1.5">Project name</label>
-            <Input id="projectName" value={projectName} onChange={(e) => setProjectName(e.target.value)} placeholder="Your project name" />
+            <Input id="projectName" value={projectName} onChange={(e) => setProjectName(e.target.value)} placeholder="e.g. My Awesome App" />
           </div>
           <div>
             <label htmlFor="projectDesc" className="block text-sm text-white/70 mb-1.5">Description</label>
@@ -109,11 +128,8 @@ export function AddProjectModal({ isOpen, onOpenChange }) {
                 <div className="h-12 w-12 rounded-xl bg-white/[0.05] border border-white/10 flex items-center justify-center group-hover:border-cyan-400/30 group-hover:bg-cyan-400/5 transition-all">
                   <UploadCloud className="w-6 h-6" />
                 </div>
-                {isDragActive ?
-                  <p>Drop the file here ...</p> :
-                  <p className="text-sm">Drag & drop a .zip file here, or click to select</p>
-                }
-                <p className="text-xs text-white/50">Max file size: 200MB</p>
+                <p className="text-sm">Drag & drop a .zip file here, or click to select</p>
+                <p className="text-xs text-white/50">Up to 200MB</p>
               </div>
             </div>
             {file && <p id="fileName" className="text-xs text-white/70 mt-2 text-center">{file.name} • {(file.size / (1024 * 1024)).toFixed(2)} MB</p>}
@@ -122,8 +138,8 @@ export function AddProjectModal({ isOpen, onOpenChange }) {
           
           <DialogFooter className="pt-2">
             <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>Cancel</Button>
-            <Button type="submit" variant="gradient" disabled={isAdding || !file}>
-              {isAdding ? (
+            <Button type="submit" variant="gradient" disabled={isSubmitting || !file}>
+              {isSubmitting ? (
                 <>
                   <LoaderCircle className="w-4.5 h-4.5 mr-2 animate-spin" />
                   Uploading...
